@@ -58,10 +58,9 @@ node ('docker') {
      else
        oc start-build ${APP_NAME} --from-dir=target/ --follow
      fi
-
+    \'''
     echo "Workaround for fixing the issue where gitlab webhook config does not persist. See issue https://github.com/jenkinsci/gitlab-plugin/issues/395"
     build 'generate-job'
-\'''
    }
 }
 
