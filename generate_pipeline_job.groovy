@@ -61,25 +61,22 @@ node ('docker') {
     \'''
    }
    
-   stage 'Dev Test" {
+   stage 'Dev Test" 
     echo "Running test in dev environment.."   
-   }
+  
 
   timeout(time:5, unit:'DAYS') {
     emailext body: 'Jenkins deployment requires your approval.', subject: 'Approval Required', to: 'bryansazon@hotmail.com'
     input message:'Dev testing passed. Approve deployment to SIT?', submitter: 'administrators'
   }
 
-  stage 'Deploy to SIT' {
+  stage 'Deploy to SIT'
     echo "Running deployment in SIT"
-  }
   
-  stage "SIT Test" {
+  stage "SIT Test"
     echo "Running test in SIT environment.."
-  }
-  
-  // remove this when https://github.com/jenkinsci/gitlab-plugin/issues/395 is fixed. specific to gitlab issue
-  build "generate-job"
+    // remove this when https://github.com/jenkinsci/gitlab-plugin/issues/395 is fixed. specific to gitlab issue
+    build "generate-job"
 }
 
 ''')
