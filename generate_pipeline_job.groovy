@@ -39,8 +39,8 @@ node ('docker') {
      sh "${mvnHome}/bin/mvn sonar:sonar -Dsonar.host.url=http://sonar:9000/sonar -Dsonar.login=adopadmin -Dsonar.password=bryan123 -Dsonar.jdbc.url='jdbc:mysql://sonar-mysql:3306/sonar?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true' -Dsonar.jdbc.username=sonar -Dsonar.jdbc.password=sonar"
    }
 
-   stage 'Deploy'
-   gitlabCommitStatus("Deploy") {
+   stage 'Deploy to Dev'
+   gitlabCommitStatus("Deploy to Dev") {
      sh \'''#!/bin/bash -e
 
      APP_NAME=${gitlabSourceRepoName}
@@ -59,9 +59,25 @@ node ('docker') {
        oc start-build ${APP_NAME} --from-dir=target/ --follow
      fi
     \'''
-    echo "Workaround for fixing the issue where gitlab webhook config does not persist. See issue https://github.com/jenkinsci/gitlab-plugin/issues/395"
-    build 'generate-job'
    }
+   
+   stage 'Dev Test" {
+    echo "Running test in dev environment.."   
+   }
+
+  timeout(time:5, unit:'DAYS') {
+    emailext body: 'Jenkins deployment requires your approval.', subject: 'Approval Required', to: 'bryansazon@hotmail.com'
+    input message:'Dev testing passed. Approve deployment to SIT?', submitter: 'administrators'
+  }
+
+  stage 'Deploy to SIT' {
+    echo "Running deployment in SIT"
+  }
+  
+  stage "SIT Test" {
+    echo "Running test in SIT environment.."
+  }
+  
 }
 
 ''')
