@@ -61,7 +61,7 @@ node ('docker') {
     \'''
    }
    
-   stage 'Dev Test" 
+   stage 'Dev Test'
     echo "Running test in dev environment.."   
   
 
