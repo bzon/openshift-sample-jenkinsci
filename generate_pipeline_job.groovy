@@ -78,6 +78,8 @@ node ('docker') {
     echo "Running test in SIT environment.."
   }
   
+  // remove this when https://github.com/jenkinsci/gitlab-plugin/issues/395 is fixed. specific to gitlab issue
+  build "generate-job"
 }
 
 ''')
