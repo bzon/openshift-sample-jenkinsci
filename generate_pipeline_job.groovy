@@ -39,23 +39,25 @@ node ('docker') {
 stage 'deploy: dev'
 node ('docker') {
   gitlabCommitStatus("Deploy to Dev") {
-    sh \'''#!/bin/bash -e
-    APP_NAME=java-${gitlabSourceBranch}
-    PROJECT=develop-feature
-    oc login $OC_HOST -u $OC_USER -p $OC_PASSWORD --insecure-skip-tls-verify=true
-    oc project ${PROJECT}
-    if [[ $(oc get deploymentconfigs | grep ${APP_NAME} | wc -l) -eq 0 ]]; 
-    then
-      oc new-build -i wildfly:10.0 --binary=true --context-dir=/ --name=${APP_NAME}
-      oc start-build ${APP_NAME} --from-dir=target/ --follow
-      oc logs -f bc/${APP_NAME}
-      oc new-app -i ${APP_NAME}
-      oc expose svc/${APP_NAME}
-    else
-      oc start-build ${APP_NAME} --from-dir=target/ --follow
-    fi
-    \'''
-   }
+    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'oc-login', passwordVariable: 'OC_PASSWORD', usernameVariable: 'OC_USER']]) {
+      sh \'''#!/bin/bash -e
+      APP_NAME=java-${gitlabSourceBranch}
+      PROJECT=develop-feature
+      oc login $OC_HOST -u $OC_USER -p $OC_PASSWORD --insecure-skip-tls-verify=true
+      oc project ${PROJECT}
+      if [[ $(oc get deploymentconfigs | grep ${APP_NAME} | wc -l) -eq 0 ]]; 
+      then
+        oc new-build -i wildfly:10.0 --binary=true --context-dir=/ --name=${APP_NAME}
+        oc start-build ${APP_NAME} --from-dir=target/ --follow
+        oc logs -f bc/${APP_NAME}
+        oc new-app -i ${APP_NAME}
+        oc expose svc/${APP_NAME}
+      else
+        oc start-build ${APP_NAME} --from-dir=target/ --follow
+      fi
+      \'''
+    }
+  }
 }
 
 stage 'test: regression'
