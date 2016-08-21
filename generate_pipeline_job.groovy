@@ -40,8 +40,9 @@ stage 'deploy: dev'
 node ('docker') {
   gitlabCommitStatus("Deploy to Dev") {
     sh \'''#!/bin/bash -e
-    APP_NAME=${gitlabSourceRepoName}
+    APP_NAME=java-${gitlabSourceBranch}
     PROJECT=develop-feature
+    oc login $OC_HOST -u $OC_USER -p $OC_PASSWORD --insecure-skip-tls-verify=true
     oc project ${PROJECT}
     if [[ $(oc get deploymentconfigs | grep ${APP_NAME} | wc -l) -eq 0 ]]; 
     then
@@ -87,6 +88,10 @@ node ('docker') {
     echo "Integration test completed."
   }
 }
+
+// workaround fix for https://github.com/jenkinsci/gitlab-plugin/issues/395
+build 'generate-job'
+
 ''')
             sandbox()
         }
