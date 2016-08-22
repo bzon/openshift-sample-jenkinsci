@@ -60,16 +60,16 @@ node ('docker') {
   }
 }
 
-stage 'test: regression'
+stage 'test: integration'
 node ('docker') {
   gitlabCommitStatus('Regression Test') {
-    sh "echo 'Running test in dev environment..'"
+    sh "echo 'Running test for ${gitlabSourceBranch} feature..'"
   }
 }
 
 stage 'email: send notification to developers'
 node {
-  emailext body: "Jenkins deployment completed for ${gitlabSourceBranch} .", subject: 'Approval Required', to: 'bryansazon@hotmail.com'
+  // emailext body: "Jenkins deployment completed for ${gitlabSourceBranch} .", subject: 'Approval Required', to: 'bryansazon@hotmail.com'
 }
 
 // workaround fix for https://github.com/jenkinsci/gitlab-plugin/issues/395
