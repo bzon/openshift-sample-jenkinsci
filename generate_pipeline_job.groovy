@@ -40,7 +40,7 @@ stage 'deploy: dev'
 node ('docker') {
   gitlabCommitStatus("Deploy to Dev") {
     withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'oc-login', passwordVariable: 'OC_PASSWORD', usernameVariable: 'OC_USER']]) {
-      sh '''#!/bin/bash -e
+      sh \'''#!/bin/bash -e
       APP_NAME=java-${gitlabSourceBranch}
       PROJECT=develop-feature
       oc login $OC_HOST -u $OC_USER -p $OC_PASSWORD --insecure-skip-tls-verify=true
@@ -55,7 +55,7 @@ node ('docker') {
       else
         oc start-build ${APP_NAME} --from-dir=target/ --follow
       fi
-      '''
+      \'''
     }
   }
 }
