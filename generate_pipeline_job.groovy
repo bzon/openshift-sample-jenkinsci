@@ -40,7 +40,7 @@ stage 'deploy: dev'
 node ('docker') {
   gitlabCommitStatus("Deploy to Dev") {
     withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'oc-login', passwordVariable: 'OC_PASSWORD', usernameVariable: 'OC_USER']]) {
-      sh \'''#!/bin/bash -e
+      sh '''#!/bin/bash -e
       APP_NAME=java-${gitlabSourceBranch}
       PROJECT=develop-feature
       oc login $OC_HOST -u $OC_USER -p $OC_PASSWORD --insecure-skip-tls-verify=true
@@ -55,21 +55,40 @@ node ('docker') {
       else
         oc start-build ${APP_NAME} --from-dir=target/ --follow
       fi
-      \'''
+      '''
     }
+  }
+}
+
+stage 'test: regression'
+node ('docker') {
+  gitlabCommitStatus('Regression Test') {
+    sh "echo 'Running test in dev environment..'"
+  }
+}
+
+stage 'email: deploy to sit approval'
+node {
+  emailext body: 'Jenkins deployment requires your approval.', subject: 'Approval Required', to: 'bryansazon@hotmail.com'
+}
+
+stage 'approval'
+timeout(time:5, unit:'DAYS') {
+  input message:'Dev testing passed. Approve deployment to SIT?', submitter: 'administrators'
+}
+
+stage 'deploy: sit'
+node ('docker') {
+  gitlabCommitStatus('Deploy to SIT') {
+    echo "Deployment to SIT completed"
   }
 }
 
 stage 'test: integration'
 node ('docker') {
-  gitlabCommitStatus('Regression Test') {
-    sh "echo 'Running test for ${gitlabSourceBranch} feature..'"
+  gitlabCommitStatus('Integration Test') {
+    echo "Integration test completed."
   }
-}
-
-stage 'email: send notification to developers'
-node {
-  emailext body: "Jenkins deployment completed for ${gitlabSourceBranch} .", subject: 'Approval Required', to: 'bryansazon@hotmail.com'
 }
 
 // workaround fix for https://github.com/jenkinsci/gitlab-plugin/issues/395
