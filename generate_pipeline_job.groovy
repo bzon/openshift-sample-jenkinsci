@@ -56,6 +56,7 @@ node ('docker') {
       else
         oc start-build ${APP_NAME} --from-dir=target/ --follow
       fi
+      sleep 20
       \'''
     }
   }
