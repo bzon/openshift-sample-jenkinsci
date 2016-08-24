@@ -15,6 +15,7 @@ pipelineJob('openshift-ci-pipeline') {
     definition {
         cps {
           script('''
+
 properties properties: [[$class: 'GitLabConnectionProperty', gitLabConnection: 'ADOP Gitlab']]
 
 def scmURL = 'git@gitlab:adopadmin/os-sample-java-web.git' 
@@ -60,34 +61,14 @@ node ('docker') {
   }
 }
 
-stage 'test: regression'
+stage 'security test: owasp zap'
 node ('docker') {
-  gitlabCommitStatus('Regression Test') {
-    sh "echo 'Running test in dev environment..'"
-  }
-}
-
-stage 'email: deploy to sit approval'
-node {
-  emailext body: 'Jenkins deployment requires your approval.', subject: 'Approval Required', to: 'bryansazon@hotmail.com'
-}
-
-stage 'approval'
-timeout(time:5, unit:'DAYS') {
-  input message:'Dev testing passed. Approve deployment to SIT?', submitter: 'administrators'
-}
-
-stage 'deploy: sit'
-node ('docker') {
-  gitlabCommitStatus('Deploy to SIT') {
-    echo "Deployment to SIT completed"
-  }
-}
-
-stage 'test: integration'
-node ('docker') {
-  gitlabCommitStatus('Integration Test') {
-    echo "Integration test completed."
+  gitlabCommitStatus('OWASP ZAP Test') {
+    sh \'''
+    #!/bin/bash -e
+    APP_NAME=java-${gitlabSourceBranch}
+    docker run --rm -t owasp/zap2docker-weekly zap-baseline.py -t http://${APP_NAME}.${OC_APP_SUBDOMAIN}
+    \'''
   }
 }
 
