@@ -62,17 +62,6 @@ node ('docker') {
   }
 }
 
-stage 'security test: owasp zap'
-node ('docker') {
-  gitlabCommitStatus('OWASP ZAP Test') {
-    sh \'''
-    #!/bin/bash
-    APP_NAME=java-${gitlabSourceBranch}
-    docker run --rm -t owasp/zap2docker-weekly zap-baseline.py -t http://${APP_NAME}.${OC_APP_SUBDOMAIN}
-    \'''
-  }
-}
-
 // workaround fix for https://github.com/jenkinsci/gitlab-plugin/issues/395
 build 'generate-job'
 
