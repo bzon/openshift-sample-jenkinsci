@@ -90,10 +90,23 @@ node ('docker') {
     def mvnHome = tool name: 'ADOP Maven', type: 'hudson.tasks.Maven$MavenInstallation'
     env.PATH = "${antHome}/bin:${mvnHome}/bin:${env.PATH}"
     sh \'''#!/bin/bash -e
+    
+    APP_NAME=java-${gitlabSourceBranch}
+    SCALE_COUNT=5
+    oc scale --replicas=${SCALE_COUNT} dc ${APP_NAME}
+    until [[ $( oc get pods | grep ${APP_NAME} | grep Running  | wc -l) -eq ${SCALE_COUNT} ]]; 
+    do
+       echo "Waiting for the service to be scaled up to 5.."
+       sleep 3
+    done
+    
+    sleep 5
+    
     JMETER_TESTDIR=jmeter-test
     rm -fr $JMETER_TESTDIR
     mkdir -p $JMETER_TESTDIR
     cp -rp $(ls | grep -v $JMETER_TESTDIR) $JMETER_TESTDIR/
+    
     if [ -e ../apache-jmeter-2.13.tgz ]; then
 	  cp ../apache-jmeter-2.13.tgz $JMETER_TESTDIR
     else
@@ -101,6 +114,7 @@ node ('docker') {
       cp apache-jmeter-2.13.tgz ../
       mv apache-jmeter-2.13.tgz $JMETER_TESTDIR
    fi
+   
    cd $JMETER_TESTDIR
    OC_PROJECT=dev-env
    PETCLINIC_HOST=java-${gitlabSourceBranch}-${OC_PROJECT}.${OC_APPS_DOMAIN}
