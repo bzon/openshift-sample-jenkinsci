@@ -84,24 +84,28 @@ node ('docker') {
   }    
 }
 
-stage 'perf test: jmeter & gatling'
+stage 'scale up'
 node ('docker') {
-    def antHome = tool name: 'ADOP Ant', type: 'hudson.tasks.Ant$AntInstallation'
-    def mvnHome = tool name: 'ADOP Maven', type: 'hudson.tasks.Maven$MavenInstallation'
-    env.PATH = "${antHome}/bin:${mvnHome}/bin:${env.PATH}"
     sh \'''#!/bin/bash -e
-    
     APP_NAME=java-${gitlabSourceBranch}
     SCALE_COUNT=5
     oc scale --replicas=${SCALE_COUNT} dc ${APP_NAME}
     until [[ $( oc get pods | grep ${APP_NAME} | grep Running  | wc -l) -eq ${SCALE_COUNT} ]]; 
     do
-       echo "Waiting for the service to be scaled up to 5.."
+       echo "Waiting for the service ${APP_NAME} to be scaled up to 5.."
        sleep 3
     done
-    
     sleep 5
-    
+    \'''
+}
+
+stage 'perf test: jmeter & gatling'
+node ('docker') {
+  gitlabCommitStatus("Performance Test") {
+    def antHome = tool name: 'ADOP Ant', type: 'hudson.tasks.Ant$AntInstallation'
+    def mvnHome = tool name: 'ADOP Maven', type: 'hudson.tasks.Maven$MavenInstallation'
+    env.PATH = "${antHome}/bin:${mvnHome}/bin:${env.PATH}"
+    sh \'''#!/bin/bash -e
     JMETER_TESTDIR=jmeter-test
     rm -fr $JMETER_TESTDIR
     mkdir -p $JMETER_TESTDIR
@@ -131,13 +135,15 @@ node ('docker') {
    sed -i "s+###TOKEN_VALID_URL###+http://${PETCLINIC_HOST}+g" src/test/scala/default/RecordedSimulation.scala
    sed -i "s/###TOKEN_RESPONSE_TIME###/10000/g" src/test/scala/default/RecordedSimulation.scala
    mvn gatling:execute
-   oc scale --replicas=1 dc ${APP_NAME}
    \'''
+   
    step([$class: 'GatlingPublisher', enabled: true])
    publishHTML(target: [allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'jmeter-test/src/test/jmeter', reportFiles: 'petclinic_test_plan.html', reportName: 'Jmeter Report'])
+   
+   // Scale Down the service
+   sh "oc scale --replicas=1 dc ${APP_NAME}"
+  }
 }
-
-
 ''')
             sandbox()
         }
