@@ -19,7 +19,7 @@ properties properties: [[$class: 'GitLabConnectionProperty', gitLabConnection: '
 
 def scmURL = 'git@gitlab:adopadmin/spring-petclinic.git' 
 
-stage 'build: package & Junit'
+stage 'build: JUnit & package'
 node ('docker') {
   def mvnHome = tool name: 'ADOP Maven', type: 'hudson.tasks.Maven$MavenInstallation'
   gitlabCommitStatus("Maven Build") {
@@ -35,7 +35,7 @@ node ('docker') {
       sh "${mvnHome}/bin/mvn sonar:sonar -Dsonar.host.url=http://sonar:9000/sonar -Dsonar.login=adopadmin -Dsonar.password=bryan123 -Dsonar.jdbc.url='jdbc:mysql://sonar-mysql:3306/sonar?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true' -Dsonar.jdbc.username=sonar -Dsonar.jdbc.password=sonar"
   }
 }
-stage 'deploy to openshift: dev environment'
+stage 'openshift: deploy to dev environment'
 node ('docker') {
   gitlabCommitStatus("Deploy to Dev") {
     withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'oc-login', passwordVariable: 'OC_PASSWORD', usernameVariable: 'OC_USER']]) {
@@ -84,7 +84,7 @@ node ('docker') {
   }    
 }
 
-stage 'scale up'
+stage 'openshift: scale up environment'
 node ('docker') {
     sh \'''#!/bin/bash -e
     APP_NAME=java-${gitlabSourceBranch}
