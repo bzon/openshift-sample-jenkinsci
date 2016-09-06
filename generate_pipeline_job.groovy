@@ -15,6 +15,8 @@ pipelineJob('PetClinic-App-Pipeline') {
     definition {
         cps {
           script('''
+properties properties: [[$class: 'GitLabConnectionProperty', gitLabConnection: 'ADOP Gitlab']]
+
 def scmURL = 'git@gitlab:adopadmin/spring-petclinic.git' 
 
 stage 'build: package & Junit'
@@ -26,7 +28,6 @@ node ('docker') {
     junit '**/target/surefire-reports/TEST-*.xml'
   }
 }
-
 stage 'code quality: sonar'
 node ('docker') {
   def mvnHome = tool name: 'ADOP Maven', type: 'hudson.tasks.Maven$MavenInstallation' 
@@ -34,7 +35,6 @@ node ('docker') {
       sh "${mvnHome}/bin/mvn sonar:sonar -Dsonar.host.url=http://sonar:9000/sonar -Dsonar.login=adopadmin -Dsonar.password=bryan123 -Dsonar.jdbc.url='jdbc:mysql://sonar-mysql:3306/sonar?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true' -Dsonar.jdbc.username=sonar -Dsonar.jdbc.password=sonar"
   }
 }
-
 stage 'deploy to openshift: dev environment'
 node ('docker') {
   gitlabCommitStatus("Deploy to Dev") {
@@ -59,7 +59,6 @@ node ('docker') {
     }
   }
 }
-
 stage 'regression test: cucumber & selenium'
 node ('docker') {
   def mvnHome = tool name: 'ADOP Maven', type: 'hudson.tasks.Maven$MavenInstallation'
@@ -84,6 +83,45 @@ node ('docker') {
     step([$class: 'CucumberReportPublisher', fileExcludePattern: '', fileIncludePattern: '', ignoreFailedTests: false, jenkinsBasePath: '', jsonReportDirectory: 'regression-test/target', parallelTesting: false, pendingFails: false, skippedFails: false, undefinedFails: false])
   }    
 }
+
+stage 'perf test: jmeter & gatling'
+node ('docker') {
+    def antHome = tool name: 'ADOP Ant', type: 'hudson.tasks.Ant$AntInstallation'
+    def mvnHome = tool name: 'ADOP Maven', type: 'hudson.tasks.Maven$MavenInstallation'
+    env.PATH = "${antHome}/bin:${mvnHome}/bin:${env.PATH}"
+    sh \'''#!/bin/bash -e
+    JMETER_TESTDIR=jmeter-test
+    rm -fr $JMETER_TESTDIR
+    mkdir -p $JMETER_TESTDIR
+    cp -rp $(ls | grep -v $JMETER_TESTDIR) $JMETER_TESTDIR/
+    if [ -e ../apache-jmeter-2.13.tgz ]; then
+	  cp ../apache-jmeter-2.13.tgz $JMETER_TESTDIR
+    else
+	  wget https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-2.13.tgz
+      cp apache-jmeter-2.13.tgz ../
+      mv apache-jmeter-2.13.tgz $JMETER_TESTDIR
+   fi
+   cd $JMETER_TESTDIR
+   OC_PROJECT=dev-env
+   PETCLINIC_HOST=java-${gitlabSourceBranch}-${OC_PROJECT}.${OC_APPS_DOMAIN}
+   tar -xf apache-jmeter-2.13.tgz
+   echo 'Changing user defined parameters for jmx file'
+   sed -i 's/PETCLINIC_HOST_VALUE/'"${PETCLINIC_HOST}"'/g' src/test/jmeter/petclinic_test_plan.jmx
+   sed -i 's/PETCLINIC_PORT_VALUE/80/g' src/test/jmeter/petclinic_test_plan.jmx
+   sed -i 's/CONTEXT_WEB_VALUE/petclinic/g' src/test/jmeter/petclinic_test_plan.jmx
+   sed -i 's/HTTPSampler.path"></HTTPSampler.path">petclinic</g' src/test/jmeter/petclinic_test_plan.jmx
+   cd ../
+   ant -f $JMETER_TESTDIR/apache-jmeter-2.13/extras/build.xml -Dtestpath=/workspace/PetClinic-App-Pipeline/${JMETER_TESTDIR}/src/test/jmeter -Dtest=petclinic_test_plan
+   
+   cd /workspace/PetClinic-App-Pipeline/src/test/gatling
+   sed -i "s+###TOKEN_VALID_URL###+http://${PETCLINIC_HOST}+g" src/test/scala/default/RecordedSimulation.scala
+   sed -i "s/###TOKEN_RESPONSE_TIME###/10000/g" src/test/scala/default/RecordedSimulation.scala
+   mvn gatling:execute
+   \'''
+   step([$class: 'GatlingPublisher', enabled: true])
+   publishHTML(target: [allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'jmeter-test/src/test/jmeter', reportFiles: 'petclinic_test_plan.html', reportName: 'Jmeter Report'])
+}
+
 
 ''')
             sandbox()
