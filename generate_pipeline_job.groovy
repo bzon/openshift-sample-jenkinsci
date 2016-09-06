@@ -1,13 +1,13 @@
 pipelineJob('PetClinic-App-Pipeline') {
     triggers {
         gitlabPush {
-         triggerOnPush(false)
+          triggerOnPush(false)
           triggerOnMergeRequest(true)
           triggerOpenMergeRequestOnPush('never')
           triggerOnNoteRequest(true)
           noteRegex('jenkins rebuild')
           ciSkip('true')
-          skipWorkInProgressMergeRequest(false))
+          skipWorkInProgressMergeRequest(false)
           setBuildDescription(true)
           branchFilterType('RegexBasedFilter')
           targetBranchRegex('master')
