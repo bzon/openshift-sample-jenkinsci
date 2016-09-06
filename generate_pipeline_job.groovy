@@ -142,9 +142,11 @@ node ('docker') {
    publishHTML(target: [allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'jmeter-test/src/test/jmeter', reportFiles: 'petclinic_test_plan.html', reportName: 'Jmeter Report'])
    
    // Scale Down the service
+   sh \'''#!/bin/bash -e
    APP_NAME=java-${gitlabSourceBranch}
    REPLICATE_CONTROLLER_NAME=$(oc get rc -l app=${APP_NAME} | tail -1 | awk '{print $1}')
    oc scale --replicas=1 rc ${REPLICATE_CONTROLLER_NAME}
+   \'''
   }
 }
 ''')
