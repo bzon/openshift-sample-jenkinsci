@@ -89,7 +89,8 @@ node ('docker') {
     sh \'''#!/bin/bash -e
     APP_NAME=java-${gitlabSourceBranch}
     SCALE_COUNT=5
-    oc scale --replicas=${SCALE_COUNT} dc ${APP_NAME}
+    REPLICATE_CONTROLLER_NAME=$(oc get rc -l app=${APP_NAME} | tail -1 | awk '{print $1}')
+    oc scale --replicas=${SCALE_COUNT} rc ${REPLICATE_CONTROLLER_NAME}
     until [[ $( oc get pods | grep ${APP_NAME} | grep Running  | wc -l) -eq ${SCALE_COUNT} ]]; 
     do
        echo "Waiting for the service ${APP_NAME} to be scaled up to 5.."
@@ -141,7 +142,9 @@ node ('docker') {
    publishHTML(target: [allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'jmeter-test/src/test/jmeter', reportFiles: 'petclinic_test_plan.html', reportName: 'Jmeter Report'])
    
    // Scale Down the service
-   sh "oc scale --replicas=1 dc ${APP_NAME}"
+   APP_NAME=java-${gitlabSourceBranch}
+   REPLICATE_CONTROLLER_NAME=$(oc get rc -l app=${APP_NAME} | tail -1 | awk '{print $1}')
+   oc scale --replicas=1 rc ${REPLICATE_CONTROLLER_NAME}
   }
 }
 ''')
