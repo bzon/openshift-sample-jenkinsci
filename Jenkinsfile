@@ -54,7 +54,7 @@ gitlabBuilds(builds: ["junit test & compile", "sonar code quality", "deploy to d
       sh '''#!/bin/bash -e
       CONTAINER_NAME="owasp_zap-${gitlabSourceBranch}"
       OC_PROJECT=dev-env
-      APP_URL="http://java-${gitlabSourceBranch}-${OC_PROJECT}.${OC_APPS_DOMAIN}/petclinic"
+      APP_URL="http://dev-petclinic-${OC_PROJECT}.${OC_APPS_DOMAIN}/petclinic"
       
       echo "Starting OWASP ZAP Intercepting Proxy"
       cd regression-test/
