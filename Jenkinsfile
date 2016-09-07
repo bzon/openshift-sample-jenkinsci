@@ -1,11 +1,8 @@
-
-properties properties: [[$class: 'GitLabConnectionProperty', gitLabConnection: 'ADOP Gitlab']]
-
 def scmURL = 'git@gitlab:adopadmin/spring-petclinic.git' 
 
 addGitLabMRComment '[Jenkins]: A Pipeline has started.'
 
-gitlabBuilds(builds: ["junit test & compile", "sonar code quality", "deploy to dev", "regression test", "performance test"]) {
+gitlabBuilds(builds: ["junit test & compile", "sonar code quality", "deploy to dev", "regression test", "performance test", "deploy to stage", "deploy to prod"]) {
   stage 'junit test & compile'
   node ('docker') {
     def mvnHome = tool name: 'ADOP Maven', type: 'hudson.tasks.Maven$MavenInstallation'
@@ -29,7 +26,7 @@ gitlabBuilds(builds: ["junit test & compile", "sonar code quality", "deploy to d
     gitlabCommitStatus('deploy to dev') {
       withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'oc-login', passwordVariable: 'OC_PASSWORD', usernameVariable: 'OC_USER']]) {
         sh '''#!/bin/bash -e
-        APP_NAME=java-${gitlabSourceBranch}
+        APP_NAME=dev-petclinic
         OC_PROJECT=dev-env
         oc login $OC_HOST -u $OC_USER -p $OC_PASSWORD --insecure-skip-tls-verify=true
         oc project ${OC_PROJECT}
@@ -76,7 +73,7 @@ gitlabBuilds(builds: ["junit test & compile", "sonar code quality", "deploy to d
   stage 'openshift: scale up environment'
   node ('docker') {
       sh '''#!/bin/bash -e
-      APP_NAME=java-${gitlabSourceBranch}
+      APP_NAME=dev-petclinic
       SCALE_COUNT=5
       REPLICATE_CONTROLLER_NAME=$(oc get rc -l app=${APP_NAME} | tail -1 | awk '{print $1}')
       oc scale --replicas=${SCALE_COUNT} rc ${REPLICATE_CONTROLLER_NAME}
@@ -111,7 +108,7 @@ gitlabBuilds(builds: ["junit test & compile", "sonar code quality", "deploy to d
      
      cd $JMETER_TESTDIR
      OC_PROJECT=dev-env
-     PETCLINIC_HOST=java-${gitlabSourceBranch}-${OC_PROJECT}.${OC_APPS_DOMAIN}
+     PETCLINIC_HOST=dev-petclinic-${OC_PROJECT}.${OC_APPS_DOMAIN}
      tar -xf apache-jmeter-2.13.tgz
      echo 'Changing user defined parameters for jmx file'
      sed -i 's/PETCLINIC_HOST_VALUE/'"${PETCLINIC_HOST}"'/g' src/test/jmeter/petclinic_test_plan.jmx
@@ -132,7 +129,7 @@ gitlabBuilds(builds: ["junit test & compile", "sonar code quality", "deploy to d
      
      // Scale Down the service
      sh '''#!/bin/bash -e
-     APP_NAME=java-${gitlabSourceBranch}
+     APP_NAME=dev-petclinic
      REPLICATE_CONTROLLER_NAME=$(oc get rc -l app=${APP_NAME} | tail -1 | awk '{print $1}')
      oc scale --replicas=1 rc ${REPLICATE_CONTROLLER_NAME}
      '''
@@ -148,5 +145,65 @@ gitlabBuilds(builds: ["junit test & compile", "sonar code quality", "deploy to d
   }
   
   addGitLabMRComment '[Jenkins]: Merged by Jenkins.'
+
+  stage 'deploy to stage'
+  timeout(time:1, unit:'DAYS') {
+    input message:'Approve Deployment?', submitter: 'administrators'
+  }
+  node ('docker') {
+    gitlabCommitStatus('deploy to stage') {
+      withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'oc-login', passwordVariable: 'OC_PASSWORD', usernameVariable: 'OC_USER']]) {
+        sh '''#!/bin/bash -e
+        APP_NAME=stage-petclinic
+        OC_PROJECT=stage-env
+        oc login $OC_HOST -u $OC_USER -p $OC_PASSWORD --insecure-skip-tls-verify=true
+        oc project ${OC_PROJECT}
+        if [[ $(oc get deploymentconfigs | grep ${APP_NAME} | wc -l) -eq 0 ]]; 
+        then
+          oc new-build -i wildfly:10.0 --binary=true --context-dir=/ --name=${APP_NAME}
+          oc start-build ${APP_NAME} --from-dir=target/ --follow
+          oc logs -f bc/${APP_NAME}
+          oc new-app -i ${APP_NAME}
+          oc expose svc/${APP_NAME}
+        else
+          oc start-build ${APP_NAME} --from-dir=target/ --follow
+        fi
+        sleep 20
+        '''
+      }
+    }
+  }
   
+  addGitLabMRComment '[Jenkins]: Deployed to Stage.'
+  
+  stage 'deploy to prod'
+  timeout(time:1, unit:'DAYS') {
+    input message:'Approve Deployment?', submitter: 'administrators'
+  }
+  node ('docker') {
+    gitlabCommitStatus('deploy to prod') {
+      withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'oc-login', passwordVariable: 'OC_PASSWORD', usernameVariable: 'OC_USER']]) {
+        sh '''#!/bin/bash -e
+        APP_NAME=prod-petclinic
+        OC_PROJECT=prod-env
+        oc login $OC_HOST -u $OC_USER -p $OC_PASSWORD --insecure-skip-tls-verify=true
+        oc project ${OC_PROJECT}
+        if [[ $(oc get deploymentconfigs | grep ${APP_NAME} | wc -l) -eq 0 ]]; 
+        then
+          oc new-build -i wildfly:10.0 --binary=true --context-dir=/ --name=${APP_NAME}
+          oc start-build ${APP_NAME} --from-dir=target/ --follow
+          oc logs -f bc/${APP_NAME}
+          oc new-app -i ${APP_NAME}
+          oc expose svc/${APP_NAME}
+        else
+          oc start-build ${APP_NAME} --from-dir=target/ --follow
+        fi
+        sleep 20
+        '''
+      }
+    }
+  }
+  
+    addGitLabMRComment '[Jenkins]: Deployed to Prod.'
+    
 }
