@@ -1,3 +1,7 @@
+// Tested using Jenkins 2.7 with Gitlab plugin 1.4 and Gitlab 8.11 CE
+// A sample Jenkinsfile for running a Continuous Delivery Pipeline upon Merge Request received from the project  
+// 'git@gitlab:adopadmin/spring-petclinic.git' from Gitlab
+
 def scmURL = 'git@gitlab:adopadmin/spring-petclinic.git' 
 
 addGitLabMRComment '[Jenkins]: A Pipeline has started.'
