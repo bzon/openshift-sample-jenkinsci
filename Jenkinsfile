@@ -1,6 +1,15 @@
-// Tested using Jenkins 2.7 with Gitlab plugin 1.4 and Gitlab 8.11 CE
-// A sample Jenkinsfile for running a Continuous Delivery Pipeline upon Merge Request received from the project  
-// 'git@gitlab:adopadmin/spring-petclinic.git' from Gitlab
+/** Tested using Jenkins 2.7 with Gitlab plugin 1.4 and Gitlab 8.11 CE
+ * A sample Jenkinsfile for running a Continuous Delivery Pipeline upon Merge Request received from the project  
+ * 'git@gitlab:adopadmin/spring-petclinic.git' from Gitlab
+*/
+
+/** 
+ * This property is required to enable gitlab features like gitlabCommitStatus and gitlabBuilds
+ * Though it looks redundant when default applied with Gitlab Connection upon Job creation. There is an existing issue where 
+ * having this property resets/deletes the Gitlab Push after the Pipeline runs.
+ * Uncomment/comment this line for workaround.
+properties properties: [[$class: 'GitLabConnectionProperty', gitLabConnection: 'ADOP Gitlab']]
+*/
 
 def scmURL = 'git@gitlab:adopadmin/spring-petclinic.git' 
 
