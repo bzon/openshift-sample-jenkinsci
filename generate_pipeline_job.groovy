@@ -13,13 +13,12 @@ pipelineJob('PetClinic-App-Pipeline') {
         branchFilterType('RegexBasedFilter')
         includeBranchesSpec()
         excludeBranchesSpec()
-  		targetBranchRegex('master')                 
+        targetBranchRegex('master')                 
         }
     }
     definition {
         cps {
           script('''
-//properties properties: [[$class: 'GitLabConnectionProperty', gitLabConnection: 'ADOP Gitlab']]
 
 def scmURL = 'git@gitlab:adopadmin/spring-petclinic.git' 
 
