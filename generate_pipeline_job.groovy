@@ -1,16 +1,19 @@
 pipelineJob('PetClinic-App-Pipeline') {
-    triggers {
-        gitlabPush {
-          triggerOnPush(false)
-          triggerOnMergeRequest(true)
-          triggerOpenMergeRequestOnPush('never')
-          triggerOnNoteRequest(true)
-          noteRegex('jenkins rebuild')
-          ciSkip('true')
-          skipWorkInProgressMergeRequest(false)
-          setBuildDescription(true)
-          branchFilterType('RegexBasedFilter')
-          targetBranchRegex('master')
+    configure { project ->
+        project / 'triggers' <<  'com.dabsquared.gitlabjenkins.GitLabPushTrigger'(plugin: "gitlab-plugin@1.4.0")  {
+        spec()
+        triggerOnPush(false)
+        triggerOnMergeRequest(true)
+        triggerOpenMergeRequestOnPush('never')
+        triggerOnNoteRequest(true)
+        noteRegex('jenkins rebuild')
+        ciSkip('true')
+        skipWorkInProgressMergeRequest(false)
+        setBuildDescription(true)
+        branchFilterType('RegexBasedFilter')
+        includeBranchesSpec()
+        excludeBranchesSpec()
+  		targetBranchRegex('master')                 
         }
     }
     definition {
